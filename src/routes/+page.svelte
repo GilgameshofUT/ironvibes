@@ -2979,9 +2979,10 @@
 							{#each visibleRecords as record (record.id)}
 								{@const isRecordExpanded = reorderMode || expandedRecordIds.includes(record.id)}
 								<article class="record-card">
-									<header class="record-heading">
+									<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_static_element_interactions -->
+									<header class="record-heading" tabindex="0" aria-expanded={isRecordExpanded} aria-label={`${isRecordExpanded ? 'Collapse' : 'Expand'} ${record.fields.Name}`} onclick={() => toggleRecordExpanded(record.id)} onkeydown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) { event.preventDefault(); toggleRecordExpanded(record.id); } }}>
 										<div class="record-title-cluster">
-											<button type="button" class="record-portrait-frame" title="Change or upload portrait" aria-label={`Change portrait for ${record.fields.Name}`} onclick={() => openPortraitPickerForRecord(record)}>
+											<button type="button" class="record-portrait-frame" title="Change or upload portrait" aria-label={`Change portrait for ${record.fields.Name}`} onclick={(event) => { event.stopPropagation(); openPortraitPickerForRecord(record); }}>
 												<img src={resolveRecordPortrait(record)} alt={record.fields.Name} class="record-portrait-img" />
 												<span class="record-portrait-badge" aria-hidden="true"><RpIcon name="image" size={12} /></span>
 											</button>
@@ -3001,7 +3002,7 @@
 										</div>
 										<div class="record-header-right">
 											{#if kind === 'hero'}
-												<button type="button" class="initiative-pill" class:in-control={record.initiative === 'in_control'} class:bad-spot={record.initiative === 'bad_spot'} onclick={() => cycleHeroInitiative(record)}>
+												<button type="button" class="initiative-pill" class:in-control={record.initiative === 'in_control'} class:bad-spot={record.initiative === 'bad_spot'} onclick={(event) => { event.stopPropagation(); cycleHeroInitiative(record); }}>
 													{#if activeCampaign.characterRuleset === 'ironsworn'}
 														{record.initiative === 'in_control' ? '★ Initiative' : 'No Initiative'}
 													{:else}
@@ -3009,8 +3010,7 @@
 													{/if}
 												</button>
 											{/if}
-											<button type="button" class="record-expand" class:expanded={isRecordExpanded} aria-label={`${isRecordExpanded ? 'Collapse' : 'Expand'} ${record.fields.Name}`} aria-expanded={isRecordExpanded} title={isRecordExpanded ? 'Collapse' : 'Expand'} onclick={() => toggleRecordExpanded(record.id)}>⌄</button>
-											<button class="record-delete" aria-label={`Delete ${record.fields.Name}`} onclick={() => deleteRecord(record)}><RpIcon name="delete" size={16} /></button>
+											<button class="record-delete" aria-label={`Delete ${record.fields.Name}`} onclick={(event) => { event.stopPropagation(); deleteRecord(record); }}><RpIcon name="delete" size={16} /></button>
 										</div>
 									</header>
 									{#if isRecordExpanded}
@@ -3065,7 +3065,7 @@
 										</div>
 
 										<div class="hero-subpanels">
-											<details class="hero-subpanel" open={(record.heroAssets?.length ?? 0) > 0 || record.assets.length > 0}>
+											<details class="hero-subpanel">
 												<summary class="hero-subpanel-header"><span>Assets ({(record.heroAssets?.length ?? 0) + record.assets.length})</span></summary>
 												<div class="hero-subpanel-body">
 													<div class="card-action-strip">
@@ -3107,7 +3107,7 @@
 												</div>
 											</details>
 
-											<details class="hero-subpanel" open={(record.vows?.length ?? 0) > 0 || record.legacyAndVows.length > 0}>
+											<details class="hero-subpanel">
 												<summary class="hero-subpanel-header"><span>Legacy &amp; Vows</span></summary>
 												<div class="hero-subpanel-body">
 													<div class="exp-counters-row">
@@ -3159,7 +3159,7 @@
 												</div>
 											</details>
 
-											<details class="hero-subpanel" open={record.debilities.length > 0}>
+											<details class="hero-subpanel">
 												<summary class="hero-subpanel-header"><span>{activeCampaign.characterRuleset === 'starforged' ? 'Impacts' : 'Debilities'} ({record.debilities.length})</span></summary>
 												<div class="hero-subpanel-body">
 													<div class="conditions-grid">
@@ -3188,7 +3188,7 @@
 												</div>
 											</details>
 
-											<details class="hero-subpanel" open={!!record.notes}>
+											<details class="hero-subpanel">
 												<summary class="hero-subpanel-header"><span>Character details</span></summary>
 												<div class="hero-subpanel-body">
 													<div class="record-field-grid">
@@ -3215,7 +3215,7 @@
 										</div>
 										<div class="hero-subpanels">
 											{#if record.isConnection || record.isBond || record.fields.Bond}
-												<details class="hero-subpanel" open>
+												<details class="hero-subpanel">
 													<summary class="hero-subpanel-header"><span>Connection {record.isBond || record.fields.Bond ? '(Bonded)' : ''}</span></summary>
 													<div class="hero-subpanel-body">
 														<div class="track-card-meta">
@@ -3232,7 +3232,7 @@
 													</div>
 												</details>
 											{/if}
-											<details class="hero-subpanel" open={(record.quests?.length ?? 0) > 0}>
+											<details class="hero-subpanel">
 												<summary class="hero-subpanel-header"><span>Quests ({record.quests?.length ?? 0})</span></summary>
 												<div class="hero-subpanel-body">
 													<div class="oracle-input-roll">
@@ -3253,7 +3253,7 @@
 													{/if}
 												</div>
 											</details>
-											<details class="hero-subpanel" open={!!record.notes}>
+											<details class="hero-subpanel">
 												<summary class="hero-subpanel-header"><span>Notes</span></summary>
 												<div class="hero-subpanel-body">
 													<textarea class="inline-notes-area" rows="3" value={record.notes} placeholder="NPC notes..." onchange={(event) => saveCampaignRecords(updateCampaignRecord(campaignRecords, record.id, { notes: event.currentTarget.value }))}></textarea>
@@ -5586,12 +5586,12 @@
 	.record-list { display:grid; gap:.75rem; }
 	.record-card { min-width:0; padding:.85rem; border:1px solid #c8b58a; border-radius:5px; background:#fbf4e4; box-shadow:0 2px 6px #392b170d; }
 	.record-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:.7rem; }
+	.record-card > .record-heading { cursor:pointer; }
+	.record-card > .record-heading:focus-visible { outline:3px solid var(--brass-2); outline-offset:2px; border-radius:6px; }
 	.record-heading .eyebrow { margin:0 0 .15rem; font-size:.53rem; }
 	.record-heading h3 { margin:0; color:#282015; font:700 1.02rem var(--font-head); }
 	.record-heading p { margin:.15rem 0 0; color:#6e5e43; font-size:.7rem; }
 	.record-delete { width:1.8rem; height:1.8rem; border:0; border-radius:50%; color:#5a4b34; background:transparent; font-size:1rem; cursor:pointer; }
-	.record-expand { width:1.8rem; height:1.8rem; border:1px solid #c5b58f; border-radius:50%; color:#5a4b34; background:#f6ecd6; font-size:1rem; line-height:1; cursor:pointer; transition:transform .15s ease, background .15s ease; }
-	.record-expand.expanded { transform:rotate(180deg); background:#214c48; border-color:#b4893c; color:#f3d98c; }
 	.record-delete:hover { background:#e6d7b9; color:#8b372d; }
 	.record-stat-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; margin-top:.55rem; }
 	.record-stat-row.attributes { grid-template-columns:repeat(5,minmax(0,1fr)); }
