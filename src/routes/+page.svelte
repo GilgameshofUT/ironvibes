@@ -215,6 +215,29 @@
 	let recordExtras = $state({ assets: '', legacyAndVows: '', debilities: '', characterDetails: '', notes: '' });
 	let recordFilter = $state('');
 	let recordError = $state('');
+	let expandedRecordIds = $state<string[]>([]);
+	function toggleRecordExpanded(id: string) {
+		expandedRecordIds = expandedRecordIds.includes(id) ? expandedRecordIds.filter((item) => item !== id) : [...expandedRecordIds, id];
+	}
+	type HeroStatKey = 'momentum' | 'health' | 'spirit' | 'supply' | 'edge' | 'heart' | 'iron' | 'shadow' | 'wits';
+	type HeroStatField = { label: string; key: HeroStatKey; min: number; max: number };
+	const HERO_ATTRIBUTE_STATS: HeroStatField[] = [
+		{ label: 'Edge', key: 'edge', min: -2, max: 5 },
+		{ label: 'Heart', key: 'heart', min: -2, max: 5 },
+		{ label: 'Iron', key: 'iron', min: -2, max: 5 },
+		{ label: 'Shadow', key: 'shadow', min: -2, max: 5 },
+		{ label: 'Wits', key: 'wits', min: -2, max: 5 }
+	];
+	const HERO_RESOURCE_STATS: HeroStatField[] = [
+		{ label: 'Health', key: 'health', min: 0, max: 5 },
+		{ label: 'Spirit', key: 'spirit', min: 0, max: 5 },
+		{ label: 'Supply', key: 'supply', min: 0, max: 5 },
+		{ label: 'Momentum', key: 'momentum', min: -6, max: 10 }
+	];
+	function setHeroDraftStat(key: HeroStatKey, raw: string, min: number, max: number) {
+		const value = Number(raw);
+		recordStatsDraft = { ...recordStatsDraft, [key]: Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : recordStatsDraft[key] };
+	}
 	let showTrackEditor = $state(false);
 	let editingTrackId = $state('');
 	let trackName = $state('');
@@ -1279,11 +1302,13 @@
 		try {
 			const previous = campaignRecords.find((record) => record.id === editingRecordId);
 			const base = previous ?? makeCampaignRecord(recordKind, recordDraft);
+			const debilityCount = recordExtras.debilities.split('\n').map((item) => item.trim()).filter(Boolean).length;
+			const momentumCap = previous?.momentumMax ?? computeMomentumLimits(debilityCount).momentumMax;
 			const nextRecord: CampaignRecord = {
 				...base,
 				kind: recordKind,
 				fields: Object.fromEntries(Object.entries(recordDraft).map(([key, value]) => [key, value.trim()])),
-				stats: { ...recordStatsDraft },
+				stats: { ...recordStatsDraft, momentum: Math.max(-6, Math.min(momentumCap, recordStatsDraft.momentum)) },
 				assets: recordExtras.assets.split('\n').map((item) => item.trim()).filter(Boolean),
 				legacyAndVows: recordExtras.legacyAndVows.split('\n').map((item) => item.trim()).filter(Boolean),
 				debilities: recordExtras.debilities.split('\n').map((item) => item.trim()).filter(Boolean),
@@ -1300,6 +1325,7 @@
 			};
 			if (!nextRecord.fields.Name?.trim()) throw new Error('Enter a name for this record.');
 			if (saveCampaignRecords(putCampaignRecord(campaignRecords, nextRecord))) {
+				if (!editingRecordId && !expandedRecordIds.includes(nextRecord.id)) expandedRecordIds = [...expandedRecordIds, nextRecord.id];
 				finishMapPlacement(nextRecord.id, 'character');
 				if (recordKind === 'npc' && !editingRecordId && addNextNpc) {
 					openNewRecord('npc');
@@ -2951,6 +2977,7 @@
 						{#if visibleRecords.length === 0}<div class="empty-journal-card"><img src={kind === 'hero' ? staticAsset('art/icons/hero.webp') : staticAsset('art/icons/npc.webp')} alt="" class="empty-emblem" /><strong>{recordFilter ? 'No matching records' : `No ${kind === 'hero' ? 'heroes' : 'NPCs'} yet`}</strong><p>{recordFilter ? 'Try another name or field.' : `Add a ${kind === 'hero' ? 'hero' : 'non-player character'} to start filling this campaign.`}</p>{#if !recordFilter}<button class="secondary-button" onclick={() => openNewRecord(kind)}>Add {kind === 'hero' ? 'hero' : 'NPC'}</button>{/if}</div>
 						{:else}<div class="record-list">
 							{#each visibleRecords as record (record.id)}
+								{@const isRecordExpanded = reorderMode || expandedRecordIds.includes(record.id)}
 								<article class="record-card">
 									<header class="record-heading">
 										<div class="record-title-cluster">
@@ -2982,19 +3009,14 @@
 													{/if}
 												</button>
 											{/if}
+											<button type="button" class="record-expand" class:expanded={isRecordExpanded} aria-label={`${isRecordExpanded ? 'Collapse' : 'Expand'} ${record.fields.Name}`} aria-expanded={isRecordExpanded} title={isRecordExpanded ? 'Collapse' : 'Expand'} onclick={() => toggleRecordExpanded(record.id)}>⌄</button>
 											<button class="record-delete" aria-label={`Delete ${record.fields.Name}`} onclick={() => deleteRecord(record)}><RpIcon name="delete" size={16} /></button>
 										</div>
 									</header>
+									{#if isRecordExpanded}
 									<div class="card-action-strip">
 										<button type="button" class="bar-btn" onclick={() => openEditRecord(record)}><RpIcon name="edit" size={14} /> EDIT</button>
-										<button type="button" class="bar-btn" onclick={() => openPortraitPickerForRecord(record)}><RpIcon name="image" size={14} /> PORTRAIT</button>
 										<button type="button" class="bar-btn" onclick={() => recordJournalEntry(record)}><RpIcon name="journal" size={14} /> ADD TO JOURNAL</button>
-										<button type="button" class="bar-btn" onclick={() => exportRecord(record)}><RpIcon name="export" size={14} /> EXPORT</button>
-										{#if kind === 'npc'}
-											<button type="button" class="bar-btn" onclick={() => { if (confirm(`Convert ${record.fields.Name} to a Hero?`)) saveCampaignRecords(convertNpcToHero(campaignRecords, record.id)); }}><RpIcon name="convert" size={14} /> CONVERT TO HERO</button>
-										{:else}
-											<button type="button" class="bar-btn" onclick={() => { if (confirm(`Convert ${record.fields.Name} to an NPC?`)) saveCampaignRecords(convertHeroToNpc(campaignRecords, record.id)); }}><RpIcon name="convert" size={14} /> CONVERT TO NPC</button>
-										{/if}
 										{#if reorderMode}
 											<button type="button" class="bar-btn" onclick={() => saveCampaignRecords(moveCampaignRecord(campaignRecords, record.id, 'up'))}>↑ UP</button>
 											<button type="button" class="bar-btn" onclick={() => saveCampaignRecords(moveCampaignRecord(campaignRecords, record.id, 'down'))}>↓ DOWN</button>
@@ -3166,7 +3188,7 @@
 												</div>
 											</details>
 
-											<details class="hero-subpanel">
+											<details class="hero-subpanel" open={!!record.notes}>
 												<summary class="hero-subpanel-header"><span>Character details</span></summary>
 												<div class="hero-subpanel-body">
 													<div class="record-field-grid">
@@ -3175,13 +3197,13 @@
 														{/each}
 													</div>
 													{#if record.characterDetails}<p class="mt-sm">{record.characterDetails}</p>{/if}
-												</div>
-											</details>
-
-											<details class="hero-subpanel" open={!!record.notes}>
-												<summary class="hero-subpanel-header"><span>Notes</span></summary>
-												<div class="hero-subpanel-body">
-													<textarea class="inline-notes-area" rows="3" value={record.notes} placeholder="Character notes..." onchange={(event) => saveCampaignRecords(updateCampaignRecord(campaignRecords, record.id, { notes: event.currentTarget.value }))}></textarea>
+													<label class="inline-notes-label">Notes
+														<textarea class="inline-notes-area" rows="3" value={record.notes} placeholder="Character notes..." onchange={(event) => saveCampaignRecords(updateCampaignRecord(campaignRecords, record.id, { notes: event.currentTarget.value }))}></textarea>
+													</label>
+													<div class="card-action-strip" style="margin:.6rem 0 0">
+														<button type="button" class="bar-btn" onclick={() => exportRecord(record)}><RpIcon name="export" size={14} /> EXPORT</button>
+														<button type="button" class="bar-btn" onclick={() => { if (confirm(`Convert ${record.fields.Name} to an NPC?`)) saveCampaignRecords(convertHeroToNpc(campaignRecords, record.id)); }}><RpIcon name="convert" size={14} /> CONVERT TO NPC</button>
+													</div>
 												</div>
 											</details>
 										</div>
@@ -3235,9 +3257,14 @@
 												<summary class="hero-subpanel-header"><span>Notes</span></summary>
 												<div class="hero-subpanel-body">
 													<textarea class="inline-notes-area" rows="3" value={record.notes} placeholder="NPC notes..." onchange={(event) => saveCampaignRecords(updateCampaignRecord(campaignRecords, record.id, { notes: event.currentTarget.value }))}></textarea>
+													<div class="card-action-strip" style="margin:.6rem 0 0">
+														<button type="button" class="bar-btn" onclick={() => exportRecord(record)}><RpIcon name="export" size={14} /> EXPORT</button>
+														<button type="button" class="bar-btn" onclick={() => { if (confirm(`Convert ${record.fields.Name} to a Hero?`)) saveCampaignRecords(convertNpcToHero(campaignRecords, record.id)); }}><RpIcon name="convert" size={14} /> CONVERT TO HERO</button>
+													</div>
 												</div>
 											</details>
 										</div>
+									{/if}
 									{/if}
 								</article>
 							{/each}
@@ -4872,6 +4899,21 @@
 					{#if recordKind === 'npc' && !editingRecordId}
 						<label class="location-toggle"><input type="checkbox" bind:checked={addNextNpc} /> Add next NPC?</label>
 					{/if}
+					{#if recordKind === 'hero'}
+						<div class="modal-stats-editor" role="group" aria-label="Hero stats">
+							<p class="modal-stats-title">Stats</p>
+							<div class="modal-stats-grid">
+								{#each HERO_ATTRIBUTE_STATS as stat}
+									<label><span>{stat.label}</span><input type="number" inputmode="numeric" min={stat.min} max={stat.max} value={recordStatsDraft[stat.key]} onchange={(event) => setHeroDraftStat(stat.key, event.currentTarget.value, stat.min, stat.max)} /></label>
+								{/each}
+							</div>
+							<div class="modal-stats-grid">
+								{#each HERO_RESOURCE_STATS as stat}
+									<label><span>{stat.label}</span><input type="number" inputmode="numeric" min={stat.min} max={stat.max} value={recordStatsDraft[stat.key]} onchange={(event) => setHeroDraftStat(stat.key, event.currentTarget.value, stat.min, stat.max)} /></label>
+								{/each}
+							</div>
+						</div>
+					{/if}
 					{#if recordError}<p class="notice error" role="alert">{recordError}</p>{/if}
 					<div class="modal-actions"><button type="button" class="cancel-button" onclick={() => cancelMapRecordCreation('character')}>Cancel</button><button type="submit" class="primary-button">{editingRecordId ? 'Save' : `Create ${recordKind === 'hero' ? 'hero' : 'NPC'}`}</button></div>
 				</form>
@@ -5405,6 +5447,13 @@
 	.custom-cond-row, .inline-add-row { display:flex; align-items:center; gap:.3rem; }
 	.inline-add-row input { flex:1; min-width:0; height:1.85rem; padding:0 .45rem; border:1px solid #b9a47a; border-radius:4px; background:#fffaf0; font-size:.72rem; }
 	.inline-notes-area { width:100%; box-sizing:border-box; padding:.5rem .6rem; border:1px solid #b9a47a; border-radius:5px; background:#fbf4e4; color:#2b2116; font:400 .76rem/1.45 var(--font-sans); resize:vertical; }
+	.inline-notes-label { display:block; margin:.7rem 0 0; color:#65563b; font:700 .68rem var(--font-head); letter-spacing:.06em; }
+	.modal-stats-editor { margin:.4rem 0 .2rem; padding:.55rem .65rem .6rem; border:1.5px solid #c5b186; border-radius:8px; background:#f6ecd6; }
+	.modal-stats-title { margin:0 0 .45rem; color:#65563b; font:700 .68rem var(--font-head); letter-spacing:.14em; text-transform:uppercase; }
+	.modal-stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(5.2rem,1fr)); gap:.4rem; }
+	.modal-stats-grid + .modal-stats-grid { margin-top:.4rem; }
+	.modal-stats-grid label { display:flex; flex-direction:column; gap:.2rem; margin:0; color:#65563b; font:700 .66rem var(--font-head); }
+	.modal-stats-grid input { width:100%; box-sizing:border-box; min-height:2.3rem; padding:.4rem .5rem; border:1px solid #b9a77d; border-radius:6px; background:#f6ecd6; color:#2b2116; font:400 .82rem var(--font-sans); }
 	.quest-bullet-list { list-style:disc; margin:.25rem 0 0 1.2rem; padding:0; display:grid; gap:.25rem; font-size:.75rem; }
 	.quest-bullet-list li { display:flex; align-items:center; justify-content:space-between; gap:.4rem; }
 	.inline-rank-select { display:inline-flex; align-items:center; gap:.35rem; }
@@ -5541,6 +5590,8 @@
 	.record-heading h3 { margin:0; color:#282015; font:700 1.02rem var(--font-head); }
 	.record-heading p { margin:.15rem 0 0; color:#6e5e43; font-size:.7rem; }
 	.record-delete { width:1.8rem; height:1.8rem; border:0; border-radius:50%; color:#5a4b34; background:transparent; font-size:1rem; cursor:pointer; }
+	.record-expand { width:1.8rem; height:1.8rem; border:1px solid #c5b58f; border-radius:50%; color:#5a4b34; background:#f6ecd6; font-size:1rem; line-height:1; cursor:pointer; transition:transform .15s ease, background .15s ease; }
+	.record-expand.expanded { transform:rotate(180deg); background:#214c48; border-color:#b4893c; color:#f3d98c; }
 	.record-delete:hover { background:#e6d7b9; color:#8b372d; }
 	.record-stat-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; margin-top:.55rem; }
 	.record-stat-row.attributes { grid-template-columns:repeat(5,minmax(0,1fr)); }
