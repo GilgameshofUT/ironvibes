@@ -29,6 +29,8 @@ export default defineConfig({
 			},
 			{
 				registerType: 'autoUpdate',
+				// The datasworn bundle chunk and painted terrain atlases exceed workbox's 2 MiB default.
+				maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
 				manifest: {
 					name: 'Ironvibes — Campaign Companion',
 					short_name: 'Ironvibes',

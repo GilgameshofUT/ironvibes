@@ -8,6 +8,7 @@ A clean-room, mobile-friendly campaign companion inspired by the organizational 
 npm install
 npm run dev
 npm run check
+npm run test
 npm run build
 ```
 
@@ -29,9 +30,9 @@ This copy builds as a fully static site with an offline-capable PWA, ready for G
 ## Current foundation
 
 - SvelteKit + Svelte 5 + TypeScript.
-- Responsive desktop/mobile shell and initial campaign dashboard prototype.
+- Responsive desktop/mobile campaign workspaces with browser-local records, assets and custom Delve theme/domain tables.
 - Alegreya / Alegreya SC typography and a parchment, verdigris, brass, and oxblood palette based on the Four Against Darkness reference project.
-- Local generic parchment texture and decorative ornament, plus a temporary title-art reference asset.
+- Local generic parchment texture and decorative ornament with independent game artwork.
 - Datasworn 0.3 core and official/community content packages as dependencies. Keep packages on the same schema line and review each package's embedded/source license metadata before redistributing content.
 - `idb` for future IndexedDB-backed local campaign persistence.
 - `@google/genai` and `sharp` for future trusted-server Vertex image-generation and asset-optimization workflows. Image generation has not yet been invoked.
@@ -43,5 +44,5 @@ This copy builds as a fully static site with an offline-capable PWA, ready for G
 
 ## Notes
 
-- The current UI is a scaffold/prototype; campaigns, dice, oracles, and persistence are not wired yet.
+- Campaigns, maps, dice, Datasworn pack/item JSON imports, and browser-local persistence are wired. Feature parity with Pocketforge remains unverified; see the evidence ledger in `docs/POCKETFORGE_REVIEW.md`.
 - Never expose Vertex credentials or provider keys in client code.
