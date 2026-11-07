@@ -1,6 +1,7 @@
 <script lang="ts">
 	import favicon from '#lib/assets/favicon.svg';
 	import { asset } from '$app/paths';
+	import type { AssetPath } from '$app/types';
 	import type { LayoutProps } from './$types';
 	import '../lib/styles.css';
 
@@ -9,7 +10,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<link rel="manifest" href="./manifest.webmanifest" />
+	<link rel="manifest" href={asset('manifest.webmanifest' as AssetPath)} />
 	<link rel="apple-touch-icon" href={asset('icons/apple-touch-icon.png')} />
 	<meta name="theme-color" content="#1f4b48" />
 	<meta name="mobile-web-app-capable" content="yes" />

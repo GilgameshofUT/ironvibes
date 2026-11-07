@@ -4,6 +4,29 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="text-scale" content="scale" />
+		<script>
+			// @vite-pwa/sveltekit cannot inject its registerSW tag (SvelteKit builds
+			// index.html after Vite's transformIndexHtml phase), so register here.
+			// The app base is derived from an _app asset URL, which is present in the
+			// static HTML for both the root page and the SPA fallback shell served
+			// for deep paths (those resolve their relative URLs against the deep URL).
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', () => {
+					const assetLink = document.querySelector('link[href*="_app/"]');
+					const base = assetLink
+						? new URL(assetLink.getAttribute('href').split('_app/')[0], location.href)
+						: new URL('./', location.href);
+					navigator.serviceWorker
+						.register(new URL('sw.js', base), { scope: base.href, updateViaCache: 'imports' })
+						.catch((error) =>
+							navigator.serviceWorker.getRegistration().then((existing) => {
+								// An offline update check against an installed worker is expected.
+								if (!existing) console.error('Service worker registration failed:', error);
+							})
+						);
+				});
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

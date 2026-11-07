@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "vite dev --host 0.0.0.0",
 		"dev:lan": "vite dev --host 0.0.0.0",
-		"build": "vite build",
+		"build": "vite build && node scripts/finalize-sw.mjs",
 		"preview": "vite preview --host 0.0.0.0",
 		"preview:lan": "vite preview --host 0.0.0.0",
 		"prepare": "svelte-kit sync || echo ''",

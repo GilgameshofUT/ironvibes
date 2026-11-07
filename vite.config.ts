@@ -55,7 +55,11 @@ export default defineConfig({
 				generateSW: {
 					// Full offline: precache the prerendered shell + built assets.
 					globPatterns: ['**/*.{js,css,html,webp,png,svg,woff,woff2}'],
-					navigateFallback: './404.html'
+					navigateFallback: './404.html',
+					// Take control as soon as the worker activates so the first
+					// install is usable offline without an extra reload.
+					clientsClaim: true,
+					cleanupOutdatedCaches: true
 				},
 				devOptions: {
 					enabled: false
